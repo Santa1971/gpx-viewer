@@ -1,0 +1,1123 @@
+.<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dtrail GPX 비교 뷰어</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .pdf-container {
+            background: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            padding: 20px;
+            border-radius: 3px;
+        }
+        
+        .pdf-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 20px;
+        }
+        
+        .pdf-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .pdf-toolbar {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .pdf-icon {
+            background: #e74c3c;
+            color: white;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-weight: bold;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .upload-section-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap; /* For smaller screens */
+        }
+
+        .upload-section {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            flex: 1; /* Allow sections to grow */
+            min-width: 300px; /* Minimum width for each upload section */
+        }
+        
+        .upload-area {
+            border: 2px dashed #e74c3c;
+            border-radius: 5px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover {
+            border-color: #c0392b;
+            background-color: #f9f9f9;
+        }
+        
+        .upload-area.drag-over {
+            border-color: #e74c3c;
+            background-color: #feeae8;
+        }
+        
+        .file-input { /* Common class for file inputs */
+            display: none;
+        }
+        
+        .info-section-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .info-section {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: none; /* Initially hidden */
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* Adjusted minmax */
+            gap: 15px;  /* Adjusted gap */
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .stat-card.file1 { border-left: 4px solid #e74c3c; } /* Color for file 1 */
+        .stat-card.file2 { border-left: 4px solid #3498db; } /* Color for file 2 */
+
+        .stat-title {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            color: #333;
+            font-size: 18px; /* Adjusted font size */
+            font-weight: bold;
+        }
+        
+        .km-marker-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .km-marker-table th, .km-marker-table td {
+            padding: 8px; /* Adjusted padding */
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            font-size: 12px; /* Adjusted font size */
+        }
+        
+        .km-marker-table th {
+            background-color: #f2f2f2;
+            color: #333;
+            font-weight: bold;
+        }
+        
+        .km-marker-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .shared-section { /* For map and chart */
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        .map-container {
+            width: 100%;
+            height: 450px; 
+            margin-top: 20px;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .elevation-chart {
+            width: 100%;
+            height: 250px; 
+            margin-top: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #elevation-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .player-controls { /* Will be hidden if two files are loaded */
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            flex-wrap: wrap; 
+        }
+        
+        .play-pause-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .speed-slider {
+            width: 150px;
+        }
+        
+        .runner-icon { 
+            z-index: 1000;
+            position: absolute;
+            font-size: 24px;
+            transform: translate(-50%, -50%);
+            filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.5));
+            display: none; 
+        }
+        
+        .chart-position-indicator {
+            width: 2px;
+            /* background-color: red; Defined by JS based on file */
+            position: absolute;
+            top: 0; 
+            height: 100%;
+            z-index: 100;
+            display: none;
+            pointer-events: none;
+        }
+        
+        .chart-position-dot {
+            width: 10px;
+            height: 10px;
+            /* background-color: red; Defined by JS */
+            border: 2px solid white; 
+            border-radius: 50%;
+            position: absolute;
+            z-index: 101;
+            display: none;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+        }
+        
+        .section-title {
+            font-size: 20px; 
+            color: #2c3e50;
+            border-bottom: 2px solid; /* Color set by context */
+            padding-bottom: 5px;
+            margin-top: 30px;
+            margin-bottom: 15px; 
+        }
+        .section-title.file1 { border-color: #e74c3c; }
+        .section-title.file2 { border-color: #3498db; }
+        .section-title.shared { border-color: #2c3e50; }
+        
+        .current-info {
+            display: flex;
+            gap: 15px;
+            background: #f2f2f2;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-weight: bold;
+            flex-grow: 1; 
+            min-width: 280px; 
+        }
+        
+        .current-info span {
+            flex: 1;
+            white-space: nowrap;
+        }
+        .runner-leaflet-div-icon { 
+            font-size: 24px;
+            text-align: center;
+            line-height: 30px; 
+        }
+        .legend { margin-top: 10px; margin-bottom:10px; display: flex; gap: 20px; justify-content: center; align-items: center;}
+        .legend-item { display: flex; align-items: center; gap: 5px;}
+        .legend-color { width: 20px; height: 10px; display: inline-block;}
+    </style>
+</head>
+<body>
+    <div class="pdf-container">
+        <div class="pdf-header">
+            <div class="pdf-title">Dtrail GPX 비교 뷰어</div>
+            <div class="pdf-toolbar">
+                <div class="pdf-icon">GPX</div>
+            </div>
+        </div>
+        
+        <div class="container">
+            <div class="upload-section-container">
+                <div class="upload-section">
+                    <h2 class="section-title file1">Dtrail GPX 파일 업로드</h2>
+                    <div class="upload-area" id="upload-area-1">
+                        <p>GPX 파일을 여기에 드래그 앤 드롭하거나 클릭하여 선택하세요</p>
+                        <input type="file" id="file-input-1" class="file-input" accept=".gpx" data-file-index="1">
+                    </div>
+                </div>
+                <div class="upload-section">
+                    <h2 class="section-title file2">GPX 파일 업로드</h2>
+                    <div class="upload-area" id="upload-area-2">
+                        <p>GPX 파일을 여기에 드래그 앤 드롭하거나 클릭하여 선택하세요</p>
+                        <input type="file" id="file-input-2" class="file-input" accept=".gpx" data-file-index="2">
+                    </div>
+                </div>
+            </div>
+
+            <div class="shared-section">
+                <h2 class="section-title shared">지도 &amp; 경로</h2>
+                <div class="legend">
+                    <span class="legend-item"><span class="legend-color" style="background-color: #e74c3c;"></span> 파일 1</span>
+                    <span class="legend-item"><span class="legend-color" style="background-color: #3498db;"></span> 파일 2</span>
+                </div>
+                <div class="map-container" id="map">
+                    <div class="runner-icon" id="runner-icon">🏃</div> 
+                </div>
+                 <div class="player-controls" id="player-controls">
+                    <button class="play-pause-btn" id="play-pause-btn">▶</button>
+                    <div class="speed-control">
+                        <span>재생속도:</span>
+                        <input type="range" min="0.1" max="5" step="0.1" value="1" class="speed-slider" id="speed-slider">
+                        <span id="speed-value">1.0x</span>
+                    </div>
+                    <div class="current-info" id="current-info">
+                        <span id="current-distance">거리: 0.0 km</span>
+                        <span id="current-elevation">고도: 0 m</span>
+                        <span id="current-time">시간 (GPX): --:--:--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="shared-section">
+                <h2 class="section-title shared">고도 차트</h2>
+                 <div class="legend">
+                    <span class="legend-item"><span class="legend-color" style="background-color: #e74c3c;"></span> 파일 1</span>
+                    <span class="legend-item"><span class="legend-color" style="background-color: #3498db;"></span> 파일 2</span>
+                </div>
+                <div class="elevation-chart" id="elevation-chart-container"> 
+                    <div class="chart-position-indicator" id="chart-position-indicator"></div>
+                    <div class="chart-position-dot" id="chart-position-dot"></div>
+                    <canvas id="elevation-canvas"></canvas>
+                </div>
+            </div>
+            
+            <div class="info-section-container">
+                <div class="info-section" id="info-section-1">
+                    <h2 class="section-title file1">GPX 파일 1 정보</h2>
+                    <div id="gpx-info-1">
+                        <div class="stats-container" id="stats-container-1"></div>
+                        <h3 class="section-title file1">킬로미터 구간별 정보 (파일 1)</h3>
+                        <div style="overflow-x: auto;">
+                            <table class="km-marker-table">
+                                <thead>
+                                    <tr>
+                                        <th>구간 (km)</th><th>누적 거리</th><th>구간 시간</th><th>누적 시간</th>
+                                        <th>구간 상승(m)</th><th>구간 하강(m)</th><th>누적 상승(m)</th><th>누적 하강(m)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="km-markers-body-1"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-section" id="info-section-2">
+                    <h2 class="section-title file2">GPX 파일 2 정보</h2>
+                    <div id="gpx-info-2">
+                        <div class="stats-container" id="stats-container-2"></div>
+                        <h3 class="section-title file2">킬로미터 구간별 정보 (파일 2)</h3>
+                        <div style="overflow-x: auto;">
+                            <table class="km-marker-table">
+                                <thead>
+                                    <tr>
+                                        <th>구간 (km)</th><th>누적 거리</th><th>구간 시간</th><th>누적 시간</th>
+                                        <th>구간 상승(m)</th><th>구간 하강(m)</th><th>누적 상승(m)</th><th>누적 하강(m)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="km-markers-body-2"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+
+    <script>
+        // DOM Elements
+        const uploadArea1 = document.getElementById('upload-area-1');
+        const fileInput1 = document.getElementById('file-input-1');
+        const infoSection1 = document.getElementById('info-section-1');
+        const statsContainer1 = document.getElementById('stats-container-1');
+        const kmMarkersTableBody1 = document.getElementById('km-markers-body-1');
+
+        const uploadArea2 = document.getElementById('upload-area-2');
+        const fileInput2 = document.getElementById('file-input-2');
+        const infoSection2 = document.getElementById('info-section-2');
+        const statsContainer2 = document.getElementById('stats-container-2');
+        const kmMarkersTableBody2 = document.getElementById('km-markers-body-2');
+
+        const playerControls = document.getElementById('player-controls');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const speedSlider = document.getElementById('speed-slider');
+        const speedValue = document.getElementById('speed-value');
+        const chartPositionIndicator = document.getElementById('chart-position-indicator');
+        const chartPositionDot = document.getElementById('chart-position-dot');
+        const currentDistance = document.getElementById('current-distance');
+        const currentElevation = document.getElementById('current-elevation');
+        const currentTimeDisplay = document.getElementById('current-time'); 
+        const runnerIconElGlobal = document.getElementById('runner-icon');
+
+        let map;
+        let elevationChart;
+        
+        let trackPoints1 = [], trackPoints2 = [];
+        let kmMarkers1 = [], kmMarkers2 = [];
+        let firstValidTimeInTrack1 = null, firstValidTimeInTrack2 = null;
+
+        // For map layers
+        let trackLayer1 = null, trackLayer2 = null;
+        let startMarker1 = null, endMarker1 = null;
+        let startMarker2 = null, endMarker2 = null;
+        let runnerLeafletMarker = null; // For single file playback
+
+        // Playback state (primarily for single file)
+        let animationFrameId;
+        let isPlaying = false;
+        let currentPointIndex = 0; 
+        let playbackSpeed = 1.0;
+        let lastTimestamp = 0; 
+
+        const fileColors = {
+            1: { line: '#e74c3c', fill: 'rgba(231, 76, 60, 0.1)', name: '파일 1' }, // Reddish
+            2: { line: '#3498db', fill: 'rgba(52, 152, 219, 0.1)', name: '파일 2' }  // Blueish
+        };
+
+        // Event Listeners
+        [uploadArea1, uploadArea2].forEach((area, index) => {
+            if (area) {
+                const fileInput = index === 0 ? fileInput1 : fileInput2;
+                area.addEventListener('click', () => fileInput.click());
+                area.addEventListener('dragover', (e) => { 
+                    e.preventDefault();
+                    area.classList.add('drag-over');
+                });
+                area.addEventListener('dragleave', () => area.classList.remove('drag-over'));
+                area.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    area.classList.remove('drag-over');
+                    if (e.dataTransfer.files.length) {
+                        fileInput.files = e.dataTransfer.files;
+                        handleFileUpload({ target: fileInput }); // Simulate event object
+                    }
+                });
+            }
+        });
+
+        if (fileInput1) fileInput1.addEventListener('change', handleFileUpload);
+        if (fileInput2) fileInput2.addEventListener('change', handleFileUpload);
+        
+        if(speedSlider) speedSlider.addEventListener('input', () => {
+            playbackSpeed = parseFloat(speedSlider.value);
+            if(speedValue) speedValue.textContent = playbackSpeed.toFixed(1) + 'x';
+        });
+        if(playPauseBtn) playPauseBtn.addEventListener('click', togglePlayPause);
+
+        function checkPlaybackAvailability() {
+            if (trackPoints1.length > 0 && trackPoints2.length > 0) {
+                playerControls.style.display = 'none'; // Hide playback if two files
+                pauseAnimation(); // Stop any ongoing animation
+                if(runnerLeafletMarker) runnerLeafletMarker.remove(); runnerLeafletMarker = null;
+                if(chartPositionIndicator) chartPositionIndicator.style.display = 'none';
+                if(chartPositionDot) chartPositionDot.style.display = 'none';
+                if(runnerIconElGlobal) runnerIconElGlobal.style.display = 'none';
+            } else if (trackPoints1.length > 0 || trackPoints2.length > 0) {
+                playerControls.style.display = 'flex'; // Show if at least one file (and not two)
+            } else {
+                playerControls.style.display = 'none'; // Hide if no files
+            }
+        }
+
+        function handleFileUpload(event) {
+            const input = event.target;
+            const fileIndex = parseInt(input.dataset.fileIndex);
+            const file = input.files[0];
+
+            if (file && file.name.toLowerCase().endsWith('.gpx')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        // Reset data for the specific file being uploaded
+                        if (fileIndex === 1) {
+                            trackPoints1 = []; kmMarkers1 = []; firstValidTimeInTrack1 = null;
+                            if(statsContainer1) statsContainer1.innerHTML = '';
+                            if(kmMarkersTableBody1) kmMarkersTableBody1.innerHTML = '';
+                            if(infoSection1) infoSection1.style.display = 'none'; 
+                            if(trackLayer1) { map.removeLayer(trackLayer1); trackLayer1 = null; }
+                            if(startMarker1) { map.removeLayer(startMarker1); startMarker1 = null; }
+                            if(endMarker1) { map.removeLayer(endMarker1); endMarker1 = null; }
+                            resetAnimation(); // Reset general animation state if file 1 changes
+                        } else { // fileIndex === 2
+                            trackPoints2 = []; kmMarkers2 = []; firstValidTimeInTrack2 = null;
+                            if(statsContainer2) statsContainer2.innerHTML = '';
+                            if(kmMarkersTableBody2) kmMarkersTableBody2.innerHTML = '';
+                            if(infoSection2) infoSection2.style.display = 'none';
+                            if(trackLayer2) { map.removeLayer(trackLayer2); trackLayer2 = null; }
+                            if(startMarker2) { map.removeLayer(startMarker2); startMarker2 = null; }
+                            if(endMarker2) { map.removeLayer(endMarker2); endMarker2 = null; }
+                        }
+                        
+                        parseGPXFile(e.target.result, fileIndex);
+                        
+                        // After parsing, update shared displays
+                        if (!map) initializeMap(); // Initialize map if not already done
+                        displayMap(); // Redraw map with potentially both tracks
+                        displayElevationChart(); // Redraw chart
+                        checkPlaybackAvailability();
+
+                    } catch (error) {
+                        console.error(`GPX parsing error for file ${fileIndex}:`, error);
+                        alert(`GPX 파일 ${fileIndex} 처리 중 오류: ${error.message}`);
+                        if (fileIndex === 1 && infoSection1) infoSection1.style.display = 'none';
+                        if (fileIndex === 2 && infoSection2) infoSection2.style.display = 'none';
+                    }
+                };
+                reader.onerror = (e) => {
+                    console.error(`File ${fileIndex} reading error:`, e);
+                    alert(`파일 ${fileIndex} 읽기 오류.`);
+                };
+                reader.readAsText(file);
+            } else if (file) {
+                alert('GPX 파일을 선택해주세요.');
+            }
+        }
+
+        function parseGPXFile(gpxContent, fileIndex) {
+            console.log(`Parsing GPX file ${fileIndex}...`);
+            const parser = new DOMParser();
+            const gpxDoc = parser.parseFromString(gpxContent, 'text/xml');
+            const xmlError = gpxDoc.querySelector('parsererror');
+
+            if (xmlError) {
+                console.error(`XML Parsing Error for file ${fileIndex}:`, xmlError.textContent);
+                alert(`GPX 파일 ${fileIndex}을 XML로 파싱하는데 실패했습니다.\n오류: ${xmlError.textContent}`);
+                return;
+            }
+            
+            let trackPointElements = Array.from(gpxDoc.querySelectorAll('trkpt'));
+            if (trackPointElements.length === 0) trackPointElements = Array.from(gpxDoc.querySelectorAll('trkseg > trkpt'));
+            if (trackPointElements.length === 0 && gpxDoc.querySelector('trk')) {
+                 trackPointElements = Array.from(gpxDoc.querySelector('trk').querySelectorAll('trkpt'));
+            }
+
+            if (trackPointElements.length === 0) {
+                alert(`GPX 파일 ${fileIndex}에서 유효한 트랙 포인트(<trkpt>)를 찾을 수 없습니다.`);
+                return;
+            }
+
+            let currentTrackPoints = trackPointElements.map((point, index) => {
+                const latAttr = point.getAttribute('lat');
+                const lonAttr = point.getAttribute('lon');
+                if (!latAttr || !lonAttr) return null;
+                const lat = parseFloat(latAttr);
+                const lon = parseFloat(lonAttr);
+                if (isNaN(lat) || isNaN(lon)) return null;
+
+                const eleNode = point.querySelector('ele');
+                const timeNode = point.querySelector('time');
+                let ele = null, time = null;
+                if (eleNode?.textContent) ele = parseFloat(eleNode.textContent);
+                if (isNaN(ele)) ele = null;
+                if (timeNode?.textContent) {
+                    const parsedTime = new Date(timeNode.textContent);
+                    if (!isNaN(parsedTime.getTime())) time = parsedTime;
+                }
+                return { index: index + 1, lat, lon, ele, time, distance: 0 };
+            }).filter(point => point !== null);
+
+            if (currentTrackPoints.length === 0) {
+                alert(`GPX 파일 ${fileIndex}에 유효한 좌표 데이터를 가진 트랙 포인트가 없습니다.`);
+                return;
+            }
+
+            let totalDistance = 0;
+            if (currentTrackPoints.length > 0) currentTrackPoints[0].distance = 0;
+            for (let i = 1; i < currentTrackPoints.length; i++) {
+                const dist = calculateDistance(
+                    currentTrackPoints[i-1].lat, currentTrackPoints[i-1].lon,
+                    currentTrackPoints[i].lat, currentTrackPoints[i].lon
+                );
+                totalDistance += dist;
+                currentTrackPoints[i].distance = totalDistance;
+            }
+            
+            const firstValidTime = currentTrackPoints.find(p => p.time instanceof Date && !isNaN(p.time.getTime()))?.time || null;
+
+            if (fileIndex === 1) {
+                trackPoints1 = currentTrackPoints;
+                firstValidTimeInTrack1 = firstValidTime;
+                if(infoSection1) infoSection1.style.display = 'block';
+                kmMarkers1 = createKilometerMarkers(trackPoints1, firstValidTimeInTrack1);
+                displayStatistics(1);
+                displayKilometerMarkers(1);
+                resetAnimation(); // Important if file 1 is reloaded
+            } else { // fileIndex === 2
+                trackPoints2 = currentTrackPoints;
+                firstValidTimeInTrack2 = firstValidTime;
+                if(infoSection2) infoSection2.style.display = 'block';
+                kmMarkers2 = createKilometerMarkers(trackPoints2, firstValidTimeInTrack2);
+                displayStatistics(2);
+                displayKilometerMarkers(2);
+            }
+        }
+
+        function createKilometerMarkers(points, firstValidTime) {
+            const markers = [];
+            if (points.length === 0) return markers;
+        
+            const totalTrackDistance = points[points.length - 1].distance;
+            let lastKmMarkerTime = firstValidTime;
+            let cumulativeGain = 0, cumulativeLoss = 0;
+        
+            for (let km = 1; (km - 1) * 1000 < totalTrackDistance; km++) {
+                const targetDistance = Math.min(km * 1000, totalTrackDistance); 
+                let markerPoint = null;
+                let pointIndexForSegmentStart = (markers.length > 0 && markers[markers.length - 1].originalPointIndex < points.length -1) 
+                                                ? markers[markers.length - 1].originalPointIndex + 1 : 0;
+                let segmentEleGain = 0, segmentEleLoss = 0;
+        
+                for (let i = pointIndexForSegmentStart; i < points.length - 1; i++) {
+                    if (points[i].distance <= targetDistance && points[i+1].distance >= targetDistance) {
+                        const p1 = points[i], p2 = points[i+1];
+                        const segmentDist = p2.distance - p1.distance;
+                        const ratio = segmentDist === 0 ? 0 : (targetDistance - p1.distance) / segmentDist;
+                        
+                        markerPoint = {
+                            km: km, distance: targetDistance,
+                            lat: p1.lat + (p2.lat - p1.lat) * ratio,
+                            lon: p1.lon + (p2.lon - p1.lon) * ratio,
+                            ele: (p1.ele !== null && p2.ele !== null) ? p1.ele + (p2.ele - p1.ele) * ratio : (p1.ele ?? p2.ele ?? null),
+                            time: (p1.time && p2.time) ? new Date(p1.time.getTime() + (p2.time.getTime() - p1.time.getTime()) * ratio) : null,
+                            originalPointIndex: i 
+                        };
+        
+                        for (let j = pointIndexForSegmentStart; j <= i; j++) {
+                            if (j > 0 && points[j].ele !== null && points[j-1].ele !== null) {
+                                const diff = points[j].ele - points[j-1].ele;
+                                if (diff > 0) segmentEleGain += diff; else segmentEleLoss += Math.abs(diff);
+                            }
+                        }
+                        if (p1.ele !== null && p2.ele !== null && ratio > 0 && ratio < 1) { 
+                             const interpolatedEleOnSegment = (p2.ele - p1.ele) * ratio;
+                             if (interpolatedEleOnSegment > 0) segmentEleGain += interpolatedEleOnSegment; else segmentEleLoss += Math.abs(interpolatedEleOnSegment);
+                        }
+                        break; 
+                    }
+                }
+        
+                if (!markerPoint && targetDistance === totalTrackDistance && points.length > 0) { 
+                    const lastPt = points[points.length - 1];
+                    markerPoint = {
+                        km: km, distance: lastPt.distance, lat: lastPt.lat, lon: lastPt.lon, ele: lastPt.ele, time: lastPt.time,
+                        originalPointIndex: points.length > 1 ? points.length - 2 : 0
+                    };
+                    for (let j = pointIndexForSegmentStart; j < points.length; j++) {
+                         if (j > 0 && points[j].ele !== null && points[j-1].ele !== null) {
+                             const diff = points[j].ele - points[j-1].ele;
+                             if (diff > 0) segmentEleGain += diff; else segmentEleLoss += Math.abs(diff);
+                         }
+                     }
+                }
+        
+                if (markerPoint) {
+                    cumulativeGain += segmentEleGain; cumulativeLoss += segmentEleLoss;
+                    markerPoint.segmentElevationGain = segmentEleGain; markerPoint.segmentElevationLoss = segmentEleLoss;
+                    markerPoint.cumulativeGain = cumulativeGain; markerPoint.cumulativeLoss = cumulativeLoss;
+        
+                    if (markerPoint.time && lastKmMarkerTime && markerPoint.time.getTime() > lastKmMarkerTime.getTime()) {
+                        markerPoint.segmentTime = (markerPoint.time.getTime() - lastKmMarkerTime.getTime()) / 1000;
+                    } else if (markerPoint.time && markers.length === 0 && firstValidTime && markerPoint.time.getTime() > firstValidTime.getTime()) { 
+                        markerPoint.segmentTime = (markerPoint.time.getTime() - firstValidTime.getTime()) / 1000;
+                    } else { markerPoint.segmentTime = null; }
+        
+                    if (markerPoint.time && firstValidTime && markerPoint.time.getTime() >= firstValidTime.getTime()) {
+                        markerPoint.cumulativeTime = (markerPoint.time.getTime() - firstValidTime.getTime()) / 1000;
+                    } else { markerPoint.cumulativeTime = null; }
+                    
+                    markers.push(markerPoint);
+                    if (markerPoint.time) lastKmMarkerTime = markerPoint.time;
+                }
+                if (markerPoint?.distance >= totalTrackDistance || (!markerPoint && targetDistance >= totalTrackDistance)) break;
+            }
+        
+            if (points.length > 0 && (markers.length === 0 || markers[markers.length-1].distance < totalTrackDistance)) {
+                const lastPt = points[points.length - 1];
+                let finalSegmentGain = 0, finalSegmentLoss = 0;
+                let finalPointStart = (markers.length > 0 && markers[markers.length - 1].originalPointIndex < points.length -1) 
+                                      ? markers[markers.length - 1].originalPointIndex + 1 : 0;
+                
+                for (let j = finalPointStart; j < points.length; j++) { 
+                     if (j > 0 && points[j].ele !== null && points[j-1].ele !== null) {
+                         const diff = points[j].ele - points[j-1].ele;
+                         if (diff > 0) finalSegmentGain += diff; else finalSegmentLoss += Math.abs(diff);
+                     }
+                 }
+                cumulativeGain += finalSegmentGain; cumulativeLoss += finalSegmentLoss;
+
+                const finalMarker = {
+                    km: Math.ceil(lastPt.distance / 1000), distance: lastPt.distance, lat: lastPt.lat, lon: lastPt.lon, ele: lastPt.ele, time: lastPt.time,
+                    originalPointIndex: points.length > 1 ? points.length - 2 : 0,
+                    segmentElevationGain: finalSegmentGain, segmentElevationLoss: finalSegmentLoss,
+                    cumulativeGain: cumulativeGain, cumulativeLoss: cumulativeLoss,
+                    segmentTime: (lastPt.time && lastKmMarkerTime && lastPt.time.getTime() > lastKmMarkerTime.getTime()) ? (lastPt.time.getTime() - lastKmMarkerTime.getTime()) / 1000 : ((lastPt.time && markers.length === 0 && firstValidTime && lastPt.time.getTime() > firstValidTime.getTime()) ? (lastPt.time.getTime() - firstValidTime.getTime())/1000 : null),
+                    cumulativeTime: (lastPt.time && firstValidTime && lastPt.time.getTime() >= firstValidTime.getTime()) ? (lastPt.time.getTime() - firstValidTime.getTime()) / 1000 : null,
+                };
+                if (markers.length === 0 || markers[markers.length-1].distance < finalMarker.distance) {
+                    markers.push(finalMarker);
+                }
+            }
+            return markers;
+        }
+
+        function displayStatistics(fileIndex) {
+            const points = fileIndex === 1 ? trackPoints1 : trackPoints2;
+            const statsContainer = fileIndex === 1 ? statsContainer1 : statsContainer2;
+            if (!points || points.length === 0 || !statsContainer) return;
+
+            const stats = {
+                pointCount: points.length,
+                distance: points.length > 0 ? points[points.length - 1].distance : 0,
+                duration: calculateDuration(points), 
+                avgSpeed: 0, maxElevation: -Infinity, minElevation: Infinity,
+                elevationGain: 0, elevationLoss: 0
+            };
+
+            if (stats.distance > 0 && stats.duration > 0) {
+                stats.avgSpeed = (stats.distance / 1000) / (stats.duration / 3600);
+            }
+
+            let prevEle = null;
+            points.forEach(point => {
+                if (point.ele !== null) {
+                    stats.maxElevation = Math.max(stats.maxElevation, point.ele);
+                    stats.minElevation = Math.min(stats.minElevation, point.ele);
+                    if (prevEle !== null) {
+                        const diff = point.ele - prevEle;
+                        if (diff > 0) stats.elevationGain += diff;
+                        else stats.elevationLoss += Math.abs(diff);
+                    }
+                    prevEle = point.ele;
+                }
+            });
+            if (stats.maxElevation === -Infinity) stats.maxElevation = null;
+            if (stats.minElevation === Infinity) stats.minElevation = null;
+
+            statsContainer.innerHTML = '';
+            const cardClass = `stat-card file${fileIndex}`;
+            addStatCard(statsContainer, '포인트 수', `${stats.pointCount}개`, cardClass);
+            addStatCard(statsContainer, '총 거리', `${(stats.distance / 1000).toFixed(2)} km`, cardClass);
+            addStatCard(statsContainer, '소요 시간 (GPX)', formatDisplayDuration(stats.duration), cardClass);
+            addStatCard(statsContainer, '평균 속도 (GPX)', `${stats.avgSpeed > 0 ? stats.avgSpeed.toFixed(1) : '-'} km/h`, cardClass);
+            addStatCard(statsContainer, '최고 고도', stats.maxElevation !== null ? `${stats.maxElevation.toFixed(0)} m` : '-', cardClass);
+            addStatCard(statsContainer, '최저 고도', stats.minElevation !== null ? `${stats.minElevation.toFixed(0)} m` : '-', cardClass);
+            addStatCard(statsContainer, '총 상승 고도', `${stats.elevationGain.toFixed(0)} m`, cardClass);
+            addStatCard(statsContainer, '총 하강 고도', `${stats.elevationLoss.toFixed(0)} m`, cardClass);
+        }
+
+        function addStatCard(container, title, value, cardClass = 'stat-card') {
+            if(!container) return;
+            const card = document.createElement('div');
+            card.className = cardClass;
+            card.innerHTML = `<div class="stat-title">${title}</div><div class="stat-value">${value}</div>`;
+            container.appendChild(card);
+        }
+
+        function calculateDuration(points) { 
+            if (points.length < 2) return 0;
+            const firstTimePoint = points.find(p => p.time instanceof Date && !isNaN(p.time.getTime()));
+            const lastTimePoint = [...points].reverse().find(p => p.time instanceof Date && !isNaN(p.time.getTime()));
+            return (firstTimePoint && lastTimePoint && lastTimePoint.time.getTime() > firstTimePoint.time.getTime()) 
+                   ? (lastTimePoint.time.getTime() - firstTimePoint.time.getTime()) / 1000 : 0;
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) { 
+            const R = 6371000; 
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            if (dLat === 0 && dLon === 0) return 0; 
+            const a = Math.sin(dLat/2)**2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2)**2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+        
+        function initializeMap() {
+            if (map) return;
+            const mapElement = document.getElementById('map');
+            if (!mapElement) { console.error("Map element not found!"); return; }
+            mapElement.innerHTML = ''; 
+            map = L.map('map', { zoomControl: true });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+        }
+
+        function displayMap() {
+            if (!map) initializeMap(); // Ensure map is initialized
+            if (!map) return; // Still no map, exit
+
+            // Clear existing layers for file 1
+            if (trackLayer1) { map.removeLayer(trackLayer1); trackLayer1 = null; }
+            if (startMarker1) { map.removeLayer(startMarker1); startMarker1 = null; }
+            if (endMarker1) { map.removeLayer(endMarker1); endMarker1 = null; }
+            // Clear existing layers for file 2
+            if (trackLayer2) { map.removeLayer(trackLayer2); trackLayer2 = null; }
+            if (startMarker2) { map.removeLayer(startMarker2); startMarker2 = null; }
+            if (endMarker2) { map.removeLayer(endMarker2); endMarker2 = null; }
+
+            let bounds = L.latLngBounds();
+
+            if (trackPoints1.length > 0) {
+                const latLngs1 = trackPoints1.map(p => [p.lat, p.lon]);
+                trackLayer1 = L.polyline(latLngs1, { color: fileColors[1].line, weight: 3 }).addTo(map);
+                bounds.extend(trackLayer1.getBounds());
+                startMarker1 = L.marker(latLngs1[0], { title: "시작점 (파일 1)" }).addTo(map).bindPopup("<b>시작점 (파일 1)</b>");
+                endMarker1 = L.marker(latLngs1[latLngs1.length-1], { title: "종료점 (파일 1)" }).addTo(map).bindPopup("<b>종료점 (파일 1)</b>");
+            }
+            if (trackPoints2.length > 0) {
+                const latLngs2 = trackPoints2.map(p => [p.lat, p.lon]);
+                trackLayer2 = L.polyline(latLngs2, { color: fileColors[2].line, weight: 3 }).addTo(map);
+                bounds.extend(trackLayer2.getBounds());
+                startMarker2 = L.marker(latLngs2[0], { title: "시작점 (파일 2)" }).addTo(map).bindPopup("<b>시작점 (파일 2)</b>");
+                endMarker2 = L.marker(latLngs2[latLngs2.length-1], { title: "종료점 (파일 2)" }).addTo(map).bindPopup("<b>종료점 (파일 2)</b>");
+            }
+
+            if (bounds.isValid()) {
+                map.fitBounds(bounds, {padding: [50, 50]});
+            } else if (trackPoints1.length === 0 && trackPoints2.length === 0) {
+                 map.setView([37.5665, 126.9780], 10); // Default view if no tracks
+            }
+        }
+
+        function displayElevationChart() {
+            const canvas = document.getElementById('elevation-canvas');
+            if (!canvas) { console.error('Elevation canvas not found'); return; }
+            const ctx = canvas.getContext('2d');
+            if (!ctx) { console.error('Could not get 2D context'); return; }
+
+            if (elevationChart) { elevationChart.destroy(); elevationChart = null; }
+            ctx.clearRect(0, 0, canvas.width, canvas.height); 
+
+            const datasets = [];
+            let hasData = false;
+
+            if (trackPoints1.length > 0) {
+                const elevationData1 = trackPoints1.filter(p => p.ele !== null).map(p => ({ x: p.distance / 1000, y: p.ele }));
+                if (elevationData1.length > 0) {
+                    datasets.push({
+                        label: fileColors[1].name,
+                        data: elevationData1,
+                        borderColor: fileColors[1].line,
+                        backgroundColor: fileColors[1].fill,
+                        fill: true, tension: 0.1, pointRadius: 0, borderWidth: 2
+                    });
+                    hasData = true;
+                }
+            }
+            if (trackPoints2.length > 0) {
+                const elevationData2 = trackPoints2.filter(p => p.ele !== null).map(p => ({ x: p.distance / 1000, y: p.ele }));
+                 if (elevationData2.length > 0) {
+                    datasets.push({
+                        label: fileColors[2].name,
+                        data: elevationData2,
+                        borderColor: fileColors[2].line,
+                        backgroundColor: fileColors[2].fill,
+                        fill: true, tension: 0.1, pointRadius: 0, borderWidth: 2
+                    });
+                    hasData = true;
+                }
+            }
+
+            if (!hasData) {
+                ctx.font = "16px Arial"; ctx.textAlign = "center"; ctx.fillStyle = "#888";
+                ctx.fillText("고도 데이터 없음", canvas.width / 2, canvas.height / 2);
+                if(chartPositionIndicator) chartPositionIndicator.style.display = 'none';
+                if(chartPositionDot) chartPositionDot.style.display = 'none';
+                return;
+            }
+            
+            // Determine combined Y-axis range
+            let combinedYValues = [];
+            datasets.forEach(ds => combinedYValues.push(...ds.data.map(d => d.y)));
+            const minEleOverall = Math.min(...combinedYValues);
+            const maxEleOverall = Math.max(...combinedYValues);
+            const yRange = maxEleOverall - minEleOverall;
+            const yPadding = yRange === 0 ? 10 : Math.max(10, yRange * 0.1);
+
+            elevationChart = new Chart(ctx, {
+                type: 'line', data: { datasets: datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        x: { type: 'linear', title: { display: true, text: '거리 (km)' } },
+                        y: { title: { display: true, text: '고도 (m)' }, min: Math.floor(minEleOverall - yPadding), max: Math.ceil(maxEleOverall + yPadding) }
+                    },
+                    plugins: { 
+                        legend: { display: true, position: 'top' }, // Show legend for multiple datasets
+                        tooltip: {
+                            enabled: true, mode: 'index', intersect: false,
+                            callbacks: {
+                                title: (tooltipItems) => tooltipItems[0] ? `거리: ${tooltipItems[0].parsed.x.toFixed(2)} km` : '',
+                                label: (tooltipItem) => `${tooltipItem.dataset.label || ''}: ${tooltipItem.parsed.y.toFixed(1)} m`
+                            }
+                        }
+                    },
+                    interaction: { mode: 'index', intersect: false },
+                }
+            });
+        }
+
+        function displayKilometerMarkers(fileIndex) {
+            const markers = fileIndex === 1 ? kmMarkers1 : kmMarkers2;
+            const tableBody = fileIndex === 1 ? kmMarkersTableBody1 : kmMarkersTableBody2;
+            if(!tableBody) return;
+            tableBody.innerHTML = ''; 
+            if (markers.length === 0) {
+                const row = tableBody.insertRow();
+                const cell = row.insertCell();
+                cell.colSpan = 8; cell.textContent = '구간 정보가 없습니다.'; cell.style.textAlign = 'center';
+                return;
+            }
+            markers.forEach((marker, index) => {
+                const row = tableBody.insertRow();
+                const prevKm = index === 0 ? 0 : (markers[index-1].km ?? index);
+                const displayKm = marker.km ?? prevKm + 1; 
+                row.insertCell().textContent = `${prevKm} - ${displayKm}`;
+                row.insertCell().textContent = (marker.distance / 1000).toFixed(2);
+                row.insertCell().textContent = formatDisplayDuration(marker.segmentTime);
+                row.insertCell().textContent = formatDisplayDuration(marker.cumulativeTime);
+                row.insertCell().textContent = marker.segmentElevationGain?.toFixed(0) ?? '-';
+                row.insertCell().textContent = marker.segmentElevationLoss?.toFixed(0) ?? '-';
+                row.insertCell().textContent = marker.cumulativeGain?.toFixed(0) ?? '-';
+                row.insertCell().textContent = marker.cumulativeLoss?.toFixed(0) ?? '-';
+            });
+        }
+
+        // --- Playback functions (mostly for single file mode) ---
+        function formatDisplayDuration(totalSeconds) {
+            if (totalSeconds === null || totalSeconds === undefined || isNaN(totalSeconds) || totalSeconds < 0) return '--:--:--';
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = Math.floor(totalSeconds % 60);
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function togglePlayPause() {
+            if (trackPoints1.length > 0 && trackPoints2.length > 0) return; // No playback for two files
+            if (isPlaying) pauseAnimation(); else startAnimation();
+        }
+
+        function startAnimation() {
+            const currentActiveTrackPoints = trackPoints1.length > 0 ? trackPoints1 : trackPoints2;
+            if (isPlaying || currentActiveTrackPoints.length === 0) return;
+            isPlaying = true;
+            if(playPauseBtn) playPauseBtn.textContent = '❚❚';
+            lastTimestamp = performance.now(); 
+            animateTrack(lastTimestamp);
+        }
+
+        function pauseAnimation() {
+            if (!isPlaying) return;
+            isPlaying = false;
+            if(playPauseBtn) playPauseBtn.textContent = '▶';
+            cancelAnimationFrame(animationFrameId);
+        }
+
+        function resetAnimation() {
+            pauseAnimation();
+            currentPointIndex = 0;
+            if (runnerLeafletMarker) { runnerLeafletMarker.remove(); runnerLeafletMarker = null; }
+            if(chartPositionIndicator) chartPositionIndicator.style.display = 'none';
+            if(chartPositionDot) chartPositionDot.style.display = 'none';
+            if(runnerIconElGlobal) runnerIconElGlobal.style.display = 'none'; 
+
+            const currentActiveTrackPoints = trackPoints1.length > 0 ? trackPoints1 : trackPoints2;
+            if (currentActiveTrackPoints.length > 0 && currentDistance) { 
+                updateRunnerPosition(0); 
+            } else if (currentDistance && currentElevation && currentTimeDisplay) { 
+                currentDistance.textContent = '거리: 0.0 km';
+                currentElevation.textContent = '고도: 0 m';
+                currentTimeDisplay.textContent = '시간 (GPX): --:--:--';
+            }
+        }
+        
+        function animateTrack(timestamp) { 
+            if (!isPlaying) return;
+            const activeTrackPoints = trackPoints1.length > 0 ? trackPoints1 : trackPoints2; // Animate first loaded if only one
+            if (activeTrackPoints.length === 0) { pauseAnimation(); return; }
+
+            const actualDeltaTime = (timestamp - lastTimestamp) / 1000; 
+            lastTimestamp = timestamp;
+        
+            if (activeTrackPoints.length <= 1) { pauseAnimation(); return; }
+        
+            const baseDurationSeconds = 60; 
+            const progressIncrement = ((activeTrackPoints.length - 1) * playbackSpeed / baseDurationSeconds) * actualDeltaTime;
+            currentPointIndex += progressIncrement;
+        
+            if (currentPointIndex >= activeTrackPoints.length - 1) {
+                currentPointIndex = activeTrackPoints.length - 1;
+                updateRunnerPosition(currentPointIndex); 
+                pauseAnimation();
+            } else {
+                updateRunnerPosition(currentPointIndex);
+                animationFrameId = requestAnimationFrame(animateTrack);
+            }
+        }
+
+        function updateRunnerPosition(targetIndexFloat) {
+            const activeTrackPoints = trackPoints1.length > 0 ? trackPoints1 : trackPoints2;
+            const activeFirstValidTime = trackPoints1.length > 0 ? firstValidTimeInTrack1 : firstValidTimeInTrack2;
+            const activeFileIndex = trackPoints1.length > 0 ? 1 : (trackPoints2.length > 0 ? 2 : 0);
+
+            if (!map || activeTrackPoints.length === 0 || !activeFileIndex) return;
+        
+            let i = Math.floor(targetIndexFloat);
+            i = Math.max(0, Math.min(i, activeTrackPoints.length - 1));
+            const p1 = activeTrackPoints[i];
+            const p2 = activeTrackPoints[Math.min(i + 1, activeTrackPoints.length - 1)]; 
+            let ratio = Math.max(0, Math.min(targetIndexFloat - i, 1));
+            if (i === activeTrackPoints.length -1 || p1 === p2) ratio = 0; 
+        
+            if (!p1 || !p2 ) return;
+
+            const interpolatedLat = p1.lat + (p2.lat - p1.lat) * ratio;
+            const interpolatedLon = p1.lon + (p2.lon - p1.lon) * ratio;
+            let interpolatedEle = (p1.ele !== null && p2.ele !== null) ? p1.ele + (p2.ele - p1.ele) * ratio : (p1.ele ?? p2.ele);
+            const interpolatedDist = p1.distance + (p2.distance - p1.distance) * ratio;
+            let interpolatedTime = null;
+            if (p1.time && p2.time) interpolatedTime = new Date(p1.time.getTime() + (p2.time.getTime() - p1.time.getTime()) * ratio);
+            else interpolatedTime = p1.time ?? p2.time;
+        
+            if (!runnerLeafletMarker) {
+                const runnerDivIcon = L.divIcon({className: 'runner-leaflet-div-icon', html: '🏃', iconSize: [24, 24], iconAnchor: [12, 24] });
+                runnerLeafletMarker = L.marker([interpolatedLat, interpolatedLon], { icon: runnerDivIcon, zIndexOffset: 1000 }).addTo(map);
+                if (runnerIconElGlobal) runnerIconElGlobal.style.display = 'none'; 
+            } else {
+                runnerLeafletMarker.setLatLng([interpolatedLat, interpolatedLon]);
+            }
+            
+            if (isPlaying && map.getBounds().contains(runnerLeafletMarker.getLatLng()) === false) { 
+                 map.panTo(runnerLeafletMarker.getLatLng(), {animate: true, duration: 0.25});
+            }
+        
+            if (elevationChart?.chartArea && elevationChart.scales?.x?.getPixelForValue && elevationChart.scales?.y?.getPixelForValue) { 
+                const chartArea = elevationChart.chartArea;
+                const xPixel = elevationChart.scales.x.getPixelForValue(interpolatedDist / 1000);
+                
+                if (!isNaN(xPixel) && xPixel >= chartArea.left && xPixel <= chartArea.right) {
+                    if(chartPositionIndicator) {
+                        chartPositionIndicator.style.left = `${xPixel}px`;
+                        chartPositionIndicator.style.display = 'block';
+                        chartPositionIndicator.style.backgroundColor = fileColors[activeFileIndex].line;
+                    }
+                    if (interpolatedEle !== null) {
+                        const yPixel = elevationChart.scales.y.getPixelForValue(interpolatedEle);
+                         if (!isNaN(yPixel) && yPixel >= chartArea.top && yPixel <= chartArea.bottom) {
+                            if(chartPositionDot) {
+                                chartPositionDot.style.left = `${xPixel}px`;
+                                chartPositionDot.style.top = `${yPixel}px`;
+                                chartPositionDot.style.display = 'block';
+                                chartPositionDot.style.backgroundColor = fileColors[activeFileIndex].line;
+                            }
+                        } else if(chartPositionDot) chartPositionDot.style.display = 'none';
+                    } else if(chartPositionDot) chartPositionDot.style.display = 'none';
+                } else {
+                    if(chartPositionIndicator) chartPositionIndicator.style.display = 'none';
+                    if(chartPositionDot) chartPositionDot.style.display = 'none';
+                }
+            }
+        
+            if(currentDistance) currentDistance.textContent = `거리: ${(interpolatedDist / 1000).toFixed(2)} km`;
+            if(currentElevation) currentElevation.textContent = `고도: ${interpolatedEle !== null ? interpolatedEle.toFixed(0) : '-'} m`;
+            let timeToDisplay = '--:--:--';
+            if (activeFirstValidTime && interpolatedTime) {
+                const elapsedSeconds = (interpolatedTime.getTime() - activeFirstValidTime.getTime()) / 1000;
+                timeToDisplay = formatDisplayDuration(Math.max(0, elapsedSeconds)); 
+            }
+            if(currentTimeDisplay) currentTimeDisplay.textContent = `시간 (GPX): ${timeToDisplay}`;
+        }
+
+        // Initialize
+        initializeMap();
+        checkPlaybackAvailability();
+    </script>
+</body>
+</html>
